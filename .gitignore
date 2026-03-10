@@ -9,6 +9,10 @@
 !README.md
 !LICENSE
 
+# Allow shell and python scripts
+!*.sh
+!*.py
+
 # ==========================================
 # 2. Deployment Apps Rules
 # ==========================================
