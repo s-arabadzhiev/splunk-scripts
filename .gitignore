@@ -1,0 +1,73 @@
+# ==========================================
+# 1. Global Ignore (Whitelist approach)
+# ==========================================
+# Ignore everything by default
+*
+
+# Allow essential project files
+!.gitignore
+!README.md
+!LICENSE
+
+# ==========================================
+# 2. Deployment Apps Rules
+# ==========================================
+# Whitelist directory levels to allow sub-directories
+!deployment-apps/
+!deployment-apps/*/
+!deployment-apps/*/*/
+!deployment-apps/*/*/*/
+
+# Ignore specific noise INSIDE apps for cleaner code
+deployment-apps/**/*.log
+deployment-apps/**/*.tmp
+deployment-apps/**/local/
+deployment-apps/**/lookups/*.csv
+deployment-apps/**/metadata/local.meta
+
+# ==========================================
+# 3. System Local Rules
+# ==========================================
+!system/
+!system/local/
+!system/local/serverclass.conf
+
+# ==========================================
+# 4. Security and Sensitive Data (Critical!)
+# ==========================================
+# Never upload passwords, certificates, or keys
+**/*password*
+**/*secret*
+**/*.pem
+**/*.key
+**/*.p12
+**/*.csr
+/etc/auth/
+
+# ==========================================
+# 5. Splunk Specific and Temporary Files
+# ==========================================
+*.pyo
+*.pyc
+*.tar
+*.tgz
+*.gz
+*.log
+*.metadata
+*.swp
+local.meta
+local/
+var/
+bin/
+/var/lib/splunk/
+
+# ==========================================
+# 6. System Files (OS Specific)
+# ==========================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
