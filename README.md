@@ -15,11 +15,11 @@ A collection of high-quality Bash scripts designed to automate the installation,
 * **Automated Downloads**
   Includes a built-in URL validator that extracts the direct `.tgz` link even if the user accidentally pastes the full `wget` command from the Splunk website.
 
+* **Forwarding Configuration**
+  Automates the creation of `outputs.conf` to connect Universal Forwarders to an Indexer, including built-in Firewall reminders.
+
 * **Systemd Integration**
   Configures Splunk to run as a service, enabling auto-start on boot and standard process management via `systemctl`.
-
-* **Permission Enforcement**
-  Ensures all directories and binaries have the correct ownership (`splunk:splunk`) to prevent permission-related errors.
 
 ---
 
@@ -36,7 +36,7 @@ Run the following command:
 
     chmod +x *.sh
 
-### 3. Run the Installation
+### 3. Run the Installation/Configuration
 > [!IMPORTANT]
 > You must run these scripts with **sudo** or as **root**.
 
@@ -47,6 +47,10 @@ Run the following command:
 **For Splunk Universal Forwarder:**
 
     sudo ./splunk_uf_install.sh
+
+**To Configure UF Forwarding (outputs.conf):**
+
+    sudo ./splunk_uf_outputs_config.sh
 
 ---
 
@@ -67,20 +71,21 @@ Run the following command:
 
 * **splunk_install.sh**: Full Splunk Enterprise deployment script.
 * **splunk_uf_install.sh**: Lightweight Universal Forwarder deployment script.
+* **splunk_uf_outputs_config.sh**: Automation for connecting UF to an Indexer (outputs.conf).
 * **.gitignore**: Optimized to exclude Splunk binaries and sensitive metadata while keeping scripts visible.
 
 ---
 
-## 🛡 Security Best Practices
+## 🛡 Security & Connectivity Best Practices
 
 * **Passwords**
   These scripts use `read -s` to prevent your passwords from being displayed on the screen during input.
 
+* **Firewall Awareness**
+  When configuring forwarding, ensure the Receiving Port (default `9997`) is open on your Indexer's firewall (e.g., via `ufw` or `firewalld`).
+
 * **Cleanup**
   The downloaded `.tgz` archives are stored in `/tmp` and should be cleared after a successful installation to save disk space.
-
-* **Secret Management**
-  Do not hardcode passwords directly into these scripts if you plan to share them publicly.
 
 ---
 
