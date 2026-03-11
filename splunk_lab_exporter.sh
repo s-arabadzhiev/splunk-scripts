@@ -1,16 +1,23 @@
 #!/bin/bash
 
-# --- CONFIGURATION ---
-SPLUNK_ETC="/opt/splunk/etc"
+# --- DYNAMIC CONFIGURATION ---
+# Detect if we are on Splunk Enterprise or Universal Forwarder
+if [ -d "/opt/splunk/etc" ]; then
+    SPLUNK_ETC="/opt/splunk/etc"
+    TYPE="Splunk Enterprise"
+elif [ -d "/opt/splunkforwarder/etc" ]; then
+    SPLUNK_ETC="/opt/splunkforwarder/etc"
+    TYPE="Universal Forwarder"
+else
+    echo "❌ Error: Splunk installation not found in /opt/splunk or /opt/splunkforwarder"
+    exit 1
+fi
 
 # Logic to find the real user and their HOME directory
 if [ -n "$SUDO_USER" ]; then
-    # If run with sudo, get the name of the user who initiated it
     REAL_USER="$SUDO_USER"
-    # Find their home directory via the system password database
     REAL_HOME=$(getent passwd "$SUDO_USER" | cut -d: -f6)
 else
-    # If run directly (without sudo)
     REAL_USER="$USER"
     REAL_HOME="$HOME"
 fi
@@ -21,49 +28,49 @@ TIMESTAMP=$(date +"%Y%m%d_%H%M")
 CURRENT_LAB_DIR="$BASE_EXPORT_DIR/lab_export_$TIMESTAMP"
 
 echo "==========================================================="
-echo "   Splunk Lab to GitHub Exporter (Fix: User Context)"
+echo "   Splunk Lab to GitHub Exporter (Universal Version)"
 echo "==========================================================="
+echo "Detected Type: $TYPE"
 echo "User detected: $REAL_USER"
-echo "Target path: $CURRENT_LAB_DIR"
+echo "Target path:   $CURRENT_LAB_DIR"
 
-# Privilege check (Splunk ETC requires root access for reading)
+# Privilege check
 if [ "$EUID" -ne 0 ]; then
   echo "❌ Error: Please run this script with sudo to access Splunk configs."
   exit 1
 fi
 
-# Create export directories
 mkdir -p "$CURRENT_LAB_DIR/system"
 mkdir -p "$CURRENT_LAB_DIR/apps"
 
+# 1. Export system-wide local configurations
 echo "1. Exporting system-wide local configurations..."
 if [ -d "$SPLUNK_ETC/system/local" ]; then
     cp -r "$SPLUNK_ETC/system/local" "$CURRENT_LAB_DIR/system/"
     echo "   -> [OK] /etc/system/local"
 fi
 
+# 2. Scanning for custom App configurations and Dashboards
 echo "2. Scanning for custom App configurations and Dashboards..."
 for app_path in "$SPLUNK_ETC/apps/"*; do
+    [ -e "$app_path" ] || continue
     app_name=$(basename "$app_path")
     
-    # List of apps to ignore (default Splunk apps)
     if [[ ! "$app_name" =~ ^(search|launcher|learned|splunk_.*|introspection_generator_addon|framework|gettingstarted|alert_log_export)$ ]]; then
-        
-        # Check for local settings
         if [ -d "$app_path/local" ]; then
             echo "   -> [Found] App: $app_name"
             mkdir -p "$CURRENT_LAB_DIR/apps/$app_name/local"
             cp -r "$app_path/local/"* "$CURRENT_LAB_DIR/apps/$app_name/local/" 2>/dev/null
         fi
         
-        # --- CLASSIC XML DASHBOARDS ---
+        # Classic Dashboards (mostly for Enterprise)
         if [ -d "$app_path/local/data/ui/views" ]; then
             echo "      - Classic Dashboards found"
             mkdir -p "$CURRENT_LAB_DIR/apps/$app_name/local/data/ui/views"
             cp -r "$app_path/local/data/ui/views/"* "$CURRENT_LAB_DIR/apps/$app_name/local/data/ui/views/" 2>/dev/null
         fi
 
-        # --- DASHBOARD STUDIO (JSON) ---
+        # Dashboard Studio (mostly for Enterprise)
         if [ -d "$app_path/local/data/ui/definition" ]; then
             echo "      - Dashboard Studio (JSON) found"
             mkdir -p "$CURRENT_LAB_DIR/apps/$app_name/local/data/ui/definition"
@@ -72,13 +79,18 @@ for app_path in "$SPLUNK_ETC/apps/"*; do
     fi
 done
 
-# --- CRITICAL STEP: Restore file ownership ---
-# Since the script runs as root, files are created as root.
-# This step transfers ownership back to the real user.
+# 3. Deployment Server Logic (only for Enterprise)
+if [ -d "$SPLUNK_ETC/deployment-apps" ]; then
+    echo "3. Scanning for Deployment Apps (Server Role)..."
+    mkdir -p "$CURRENT_LAB_DIR/deployment-apps"
+    cp -r "$SPLUNK_ETC/deployment-apps/"* "$CURRENT_LAB_DIR/deployment-apps/" 2>/dev/null
+    echo "   -> [OK] deployment-apps exported"
+fi
+
+# Restore ownership
 chown -R "$REAL_USER":"$REAL_USER" "$BASE_EXPORT_DIR"
 
 echo "==========================================================="
 echo "✅ Export complete!"
 echo "Files are now in: $CURRENT_LAB_DIR"
-echo "You can now push these to GitHub without sudo."
 echo "==========================================================="
